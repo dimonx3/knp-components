@@ -31,20 +31,14 @@ class QuerySubscriber implements EventSubscriberInterface
                 }
                 static $reflectionProperty;
                 if (is_null($reflectionProperty)) {
-                    $reflectionClass = new \ReflectionClass('Doctrine\MongoDB\Query\Query');
+                    $reflectionClass = new \ReflectionClass('Doctrine\ODM\MongoDB\Query\Query');
                     $reflectionProperty = $reflectionClass->getProperty('query');
                     $reflectionProperty->setAccessible(true);
                 }
                 $queryOptions = $reflectionProperty->getValue($event->target);
 
-                // handle multi sort
-                $sortFields = explode('+', $field);
-                $sortOption = array();
-                foreach ($sortFields as $sortField) {
-                    $sortOption[$sortField] = $dir;
-                }
-
-                $queryOptions['sort'] = $sortOption;
+                //@todo: seems like does not support multisort ?
+                $queryOptions['sort'] = array($field => $dir);
                 $reflectionProperty->setValue($event->target, $queryOptions);
             }
         }

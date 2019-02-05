@@ -2,9 +2,9 @@
 
 namespace Knp\Component\Pager\Event\Subscriber\Paginate\Doctrine\ODM\MongoDB;
 
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Knp\Component\Pager\Event\ItemsEvent;
 use Doctrine\ODM\MongoDB\Query\Query;
+use Knp\Component\Pager\Event\ItemsEvent;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class QuerySubscriber implements EventSubscriberInterface
 {
@@ -18,21 +18,23 @@ class QuerySubscriber implements EventSubscriberInterface
             }
             static $reflectionProperty;
             if (is_null($reflectionProperty)) {
-                $reflectionClass = new \ReflectionClass('Doctrine\MongoDB\Query\Query');
+                $reflectionClass = new \ReflectionClass('Doctrine\ODM\MongoDB\Query\Query');
                 $reflectionProperty = $reflectionClass->getProperty('query');
                 $reflectionProperty->setAccessible(true);
             }
             $queryOptions = $reflectionProperty->getValue($event->target);
 
-            $queryOptions['limit'] = $event->getLimit();
-            $queryOptions['skip'] = $event->getOffset();
-
             $resultQuery = clone $event->target;
-            $reflectionProperty->setValue($resultQuery, $queryOptions);
-            $cursor = $resultQuery->execute();
 
             // set the count from the cursor
-            $event->count = $cursor->count();
+            $reflectionProperty->setValue($resultQuery, array_merge($queryOptions, ['type' => Query::TYPE_COUNT]));
+            $event->count = $resultQuery->execute();
+
+            $reflectionProperty->setValue($resultQuery, array_merge($queryOptions, [
+                'limit' => $event->getLimit(),
+                'skip' => $event->getOffset()
+            ]));
+            $cursor = $resultQuery->execute();
 
             $event->items = array();
             // iterator_to_array for GridFS results in 1 item
